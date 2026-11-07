@@ -1,0 +1,19 @@
+<UserControl x:Class="DesControlCenter.App.Views.SilenceButton"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!-- The row's own view model is the DataContext (inherited); the button opens a menu of silence
+         durations. Content/tooltip come from the row so it can say "🔕 до 18:30" when silenced. -->
+    <Button x:Name="Trigger" Click="OnClick" Padding="4,1" FontSize="10" VerticalAlignment="Center"
+            Content="🔕" ToolTip="{Binding SilenceToolTip}">
+        <Button.Style>
+            <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                <Setter Property="Opacity" Value="0.55" />
+                <Style.Triggers>
+                    <DataTrigger Binding="{Binding IsSilenced}" Value="True">
+                        <Setter Property="Opacity" Value="1" />
+                    </DataTrigger>
+                </Style.Triggers>
+            </Style>
+        </Button.Style>
+    </Button>
+</UserControl>

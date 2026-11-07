@@ -1,0 +1,38 @@
+{
+  "Servers": [
+    {
+      "Id": "11111111-1111-4111-8111-111111111111",
+      "Name": "Atlas",
+      "Host": "203.0.113.10",
+      "SshConfigAlias": "example-atlas",
+      "SshUsername": "ops",
+      "PollIntervalSeconds": 60,
+      "Enabled": true
+    }
+  ],
+  "Websites": [
+    {
+      "Id": "22222222-2222-4222-8222-222222222222",
+      "Name": "Example website",
+      "Url": "https://www.example.com/",
+      "ServerId": "11111111-1111-4111-8111-111111111111",
+      "Category": "Website",
+      "Enabled": true
+    }
+  ],
+  "Services": [
+    {
+      "Id": "33333333-3333-4333-8333-333333333333",
+      "ServerId": "11111111-1111-4111-8111-111111111111",
+      "UnitName": "example-worker.service",
+      "DisplayName": "Example worker",
+      "Kind": 0,
+      "Category": "Application",
+      "UseSudo": false,
+      "Enabled": true
+    }
+  ],
+  "Vpns": [],
+  "Switches": [],
+  "Launchers": []
+}

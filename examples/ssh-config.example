@@ -1,0 +1,5 @@
+Host example-atlas
+    HostName 203.0.113.10
+    User ops
+    IdentityFile ~/.ssh/id_ed25519_example
+    IdentitiesOnly yes

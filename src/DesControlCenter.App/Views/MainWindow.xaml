@@ -1,0 +1,522 @@
+<Window x:Class="DesControlCenter.App.Views.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:DesControlCenter.App.ViewModels"
+        xmlns:conv="clr-namespace:DesControlCenter.App.Converters"
+        xmlns:views="clr-namespace:DesControlCenter.App.Views"
+        Title="DES Control Center" Height="800" Width="1320" MinWidth="420" MinHeight="500"
+        Icon="/Tray/Icons/ok.ico"
+        WindowStartupLocation="CenterScreen"
+        Closing="OnWindowClosing">
+    <Window.Resources>
+        <conv:HealthLevelToBrushConverter x:Key="HealthBrush" />
+        <conv:BoolOnlineToBrushConverter x:Key="OnlineBrush" />
+        <conv:ServiceStateToBrushConverter x:Key="ServiceBrush" />
+        <conv:CheckedBrushConverter x:Key="CheckedBrush" />
+        <conv:SwitchStateToBrushConverter x:Key="SwitchBrush" />
+
+        <Style x:Key="CategoryBadgeStyle" TargetType="Border">
+            <Setter Property="Background" Value="{DynamicResource BackgroundBrush}" />
+            <Setter Property="CornerRadius" Value="4" />
+            <Setter Property="Padding" Value="6,1" />
+            <Setter Property="Margin" Value="6,0,0,0" />
+        </Style>
+        <Style x:Key="MaintenanceNoteStyle" TargetType="TextBlock" BasedOn="{StaticResource MutedTextStyle}">
+            <Setter Property="Foreground" Value="{DynamicResource NoteBrush}" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding MaintenanceNote}" Value="">
+                    <Setter Property="Visibility" Value="Collapsed" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+        <Style x:Key="SilenceNoteStyle" TargetType="TextBlock" BasedOn="{StaticResource MutedTextStyle}">
+            <Setter Property="Foreground" Value="{DynamicResource NoteBrush}" />
+            <Setter Property="Visibility" Value="Collapsed" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsSilenced}" Value="True">
+                    <Setter Property="Visibility" Value="Visible" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+        <Style x:Key="CategoryBadgeTextStyle" TargetType="TextBlock" BasedOn="{StaticResource MutedTextStyle}">
+            <Setter Property="FontSize" Value="10" />
+        </Style>
+
+        <!-- One child row template per concrete row-VM type — ItemsControl picks by runtime type
+             when bound to the mixed-type ServerGroupViewModel.Children collection. -->
+        <DataTemplate DataType="{x:Type vm:ServiceRowViewModel}">
+            <Border Background="{DynamicResource BackgroundBrush}" CornerRadius="6" Padding="8,6" Margin="0,0,0,4">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <Ellipse Grid.Row="0" Grid.Column="0" Width="10" Height="10" Fill="{Binding State, Converter={StaticResource ServiceBrush}}"
+                             Margin="2,4,8,0" VerticalAlignment="Top" />
+
+                    <StackPanel Grid.Row="0" Grid.Column="1">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                            <Border Style="{StaticResource CategoryBadgeStyle}">
+                                <TextBlock Text="{Binding CategoryLabel}" Style="{StaticResource CategoryBadgeTextStyle}" />
+                            </Border>
+                        </StackPanel>
+                        <TextBlock Style="{StaticResource SilenceNoteStyle}" Text="{Binding SilenceNote}" TextWrapping="Wrap" />
+                        <TextBlock Style="{StaticResource MutedTextStyle}" Text="{Binding StateDisplay}" />
+                        <TextBlock Style="{StaticResource MutedTextStyle}" Text="{Binding ActiveSinceDisplay}" TextWrapping="Wrap" />
+                    </StackPanel>
+
+                    <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" Margin="0,4,0,0" HorizontalAlignment="Left">
+                        <Button Content="Start" Padding="5,3" Margin="0,0,3,0" IsEnabled="{Binding IsBusy, Converter={x:Static conv:InverseBoolConverter.Instance}}" Command="{Binding StartCommand}" />
+                        <Button Content="Stop" Padding="5,3" Margin="0,0,3,0" IsEnabled="{Binding IsBusy, Converter={x:Static conv:InverseBoolConverter.Instance}}" Command="{Binding StopCommand}" />
+                        <Button Content="Restart" Padding="5,3" Margin="0,0,3,0" IsEnabled="{Binding IsBusy, Converter={x:Static conv:InverseBoolConverter.Instance}}" Command="{Binding RestartCommand}" />
+                        <Button Content="Логи" Padding="5,3" Click="OnShowServiceLogs" />
+                        <views:SilenceButton Margin="3,0,0,0" />
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </DataTemplate>
+
+        <DataTemplate DataType="{x:Type vm:VpnRowViewModel}">
+            <Border Background="{DynamicResource BackgroundBrush}" CornerRadius="6" Padding="8,6" Margin="0,0,0,4">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <Ellipse Grid.Column="0" Width="10" Height="10" Margin="2,4,8,0" VerticalAlignment="Top">
+                        <Ellipse.Fill>
+                            <MultiBinding Converter="{StaticResource CheckedBrush}">
+                                <Binding Path="IsOnline" />
+                                <Binding Path="HasBeenChecked" />
+                            </MultiBinding>
+                        </Ellipse.Fill>
+                    </Ellipse>
+
+                    <StackPanel Grid.Column="1">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                            <Border Style="{StaticResource CategoryBadgeStyle}">
+                                <TextBlock Text="{Binding CategoryLabel}" Style="{StaticResource CategoryBadgeTextStyle}" />
+                            </Border>
+                        </StackPanel>
+                        <TextBlock Style="{StaticResource SilenceNoteStyle}" Text="{Binding SilenceNote}" TextWrapping="Wrap" />
+                        <TextBlock Style="{StaticResource MutedTextStyle}" Text="{Binding PeersSummary}" TextWrapping="Wrap" />
+                        <TextBlock Style="{StaticResource MutedTextStyle}" Text="{Binding TrafficSummary}" TextWrapping="Wrap" />
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="2" VerticalAlignment="Top">
+                        <Button Content="Перепроверить" Padding="5,3"
+                                Command="{Binding DataContext.RecheckVpnCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                CommandParameter="{Binding}" />
+                        <views:SilenceButton Margin="0,3,0,0" HorizontalAlignment="Stretch" />
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </DataTemplate>
+
+        <DataTemplate DataType="{x:Type vm:WebsiteRowViewModel}">
+            <Border Background="{DynamicResource BackgroundBrush}" CornerRadius="6" Padding="8,6" Margin="0,0,0,4">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <Ellipse Grid.Row="0" Grid.Column="0" Width="10" Height="10" Margin="2,4,8,0" VerticalAlignment="Top">
+                        <Ellipse.Fill>
+                            <MultiBinding Converter="{StaticResource CheckedBrush}">
+                                <Binding Path="Health" />
+                                <Binding Path="HasBeenChecked" />
+                            </MultiBinding>
+                        </Ellipse.Fill>
+                    </Ellipse>
+
+                    <StackPanel Grid.Row="0" Grid.Column="1">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                            <Border Style="{StaticResource CategoryBadgeStyle}">
+                                <TextBlock Text="{Binding CategoryLabel}" Style="{StaticResource CategoryBadgeTextStyle}" />
+                            </Border>
+                        </StackPanel>
+                        <TextBlock Style="{StaticResource SilenceNoteStyle}" Text="{Binding SilenceNote}" TextWrapping="Wrap" />
+                        <TextBlock Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap">
+                            <Run Text="{Binding ResponseSummary, Mode=OneWay}" />
+                            <Run Text=" · " /><Run Text="{Binding SslSummary, Mode=OneWay}" />
+                        </TextBlock>
+                    </StackPanel>
+
+                    <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" Margin="0,4,0,0" HorizontalAlignment="Left">
+                        <Button Content="Открыть" Padding="5,3" Margin="0,0,3,0" Command="{Binding OpenCommand}" />
+                        <Button Content="Проверить" Padding="5,3"
+                                Command="{Binding DataContext.RecheckWebsiteCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                CommandParameter="{Binding}" />
+                        <views:SilenceButton Margin="3,0,0,0" />
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </DataTemplate>
+
+        <DataTemplate DataType="{x:Type vm:SwitchRowViewModel}">
+            <Border Background="{DynamicResource BackgroundBrush}" CornerRadius="6" Padding="8,6" Margin="0,0,0,4">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <Ellipse Grid.Column="0" Width="10" Height="10" Fill="{Binding State, Converter={StaticResource SwitchBrush}}" Margin="2,4,8,0" VerticalAlignment="Top" />
+
+                    <StackPanel Grid.Column="1">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                            <Border Style="{StaticResource CategoryBadgeStyle}">
+                                <TextBlock Text="{Binding CategoryLabel}" Style="{StaticResource CategoryBadgeTextStyle}" />
+                            </Border>
+                        </StackPanel>
+                        <TextBlock Style="{StaticResource MutedTextStyle}" Text="{Binding StateText}" TextWrapping="Wrap" />
+                    </StackPanel>
+
+                    <Button Grid.Column="2" Content="{Binding ButtonText}" Padding="8,4" VerticalAlignment="Top" Command="{Binding ToggleCommand}" />
+                </Grid>
+            </Border>
+        </DataTemplate>
+    </Window.Resources>
+
+    <DockPanel Margin="16" Background="{DynamicResource BackgroundBrush}">
+        <StackPanel DockPanel.Dock="Top" Margin="0,0,0,8" Background="{DynamicResource BackgroundBrush}">
+            <TextBlock Text="DES CONTROL CENTER" FontSize="16" FontWeight="Bold" />
+
+            <Grid Margin="0,6,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Ellipse Width="9" Height="9" Fill="{Binding InternetAvailable, Converter={StaticResource OnlineBrush}}" Margin="0,0,6,0" VerticalAlignment="Center" />
+                    <TextBlock Text="{Binding PublicIpAddress}" Style="{StaticResource MutedTextStyle}" />
+                    <TextBlock Text="{Binding SilencedProblemCount, StringFormat='🔕 приглушено проблем: {0}'}" ToolTip="{Binding SilencedProblemsText}"
+                               Style="{StaticResource MutedTextStyle}" Margin="14,0,6,0" VerticalAlignment="Center"
+                               Visibility="{Binding SilencedProblemCount, Converter={x:Static conv:CountToVisibilityConverter.Instance}}" />
+                    <Button Content="Вернуть все" Padding="5,1" FontSize="10" Command="{Binding UnsilenceAllCommand}"
+                            Visibility="{Binding SilencedProblemCount, Converter={x:Static conv:CountToVisibilityConverter.Instance}}" />
+                </StackPanel>
+
+                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                    <Button x:Name="ThemeButton" Content="🌓" ToolTip="Тема оформления" Margin="0,0,6,0" Click="OnThemeClick" />
+                    <Button Content="Настройки" Click="OnOpenSettings" Margin="0,0,6,0" />
+                    <Button Content="Журнал" Click="OnOpenEventLog" Margin="0,0,6,0" />
+                    <Button Content="Развернуть все" Margin="0,0,6,0" Command="{Binding ExpandAllCommand}" />
+                    <Button Content="Свернуть все" Margin="0,0,6,0" Command="{Binding CollapseAllCommand}" />
+                    <Button Content="Проверить всё" Style="{StaticResource PrimaryButtonStyle}" Command="{Binding CheckAllNowCommand}" />
+                </StackPanel>
+            </Grid>
+
+            <!-- Always docked at the very top, above the scrollable columns — so opening the
+                 window from the tray's "Показать проблемы" shows what's broken immediately,
+                 with no need to scroll or hunt for the right card. -->
+            <Border CornerRadius="6" Padding="10,6" Margin="0,8,0,0" Background="{StaticResource WarningBrush}">
+                <Border.Style>
+                    <Style TargetType="Border">
+                        <Setter Property="Visibility" Value="Collapsed" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsLocalNetworkOutage}" Value="True">
+                                <Setter Property="Visibility" Value="Visible" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+                <TextBlock Foreground="#1B1B1B" FontWeight="SemiBold" FontSize="12" TextWrapping="Wrap"
+                           Text="{Binding LocalNetworkOutageText}" />
+            </Border>
+            <Border Background="{StaticResource ProblemBrush}" CornerRadius="6" Padding="10,6" Margin="0,8,0,0"
+                    Visibility="{Binding Problems.Count, Converter={x:Static conv:CountToVisibilityConverter.Instance}}">
+                <ItemsControl ItemsSource="{Binding Problems}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding}" Foreground="White" FontWeight="SemiBold" FontSize="12" />
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </Border>
+        </StackPanel>
+
+        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <StackPanel>
+
+                <!-- Server overview. Every VPS is one compact card, collapsed by default (name, state,
+                     CPU/RAM/disk, resource counts); clicking the card opens it into a full-width block
+                     with the detailed metrics and every service/VPN/site row. ServerGridPanel keeps the
+                     collapsed cards in a stable left-to-right grid. -->
+                <ItemsControl ItemsSource="{Binding ServerGroups}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <views:ServerGridPanel MinCardWidth="310" MaxColumns="4" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemContainerStyle>
+                        <Style TargetType="ContentPresenter">
+                            <Setter Property="views:ServerGridPanel.Expanded" Value="{Binding IsExpanded}" />
+                        </Style>
+                    </ItemsControl.ItemContainerStyle>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="{x:Type vm:ServerGroupViewModel}">
+                            <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="8" Margin="0,0,10,10">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="5" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+
+                                    <!-- health stripe: worst of server / resources / housekeeping -->
+                                    <Border Grid.Column="0" CornerRadius="8,0,0,8">
+                                        <Border.Background>
+                                            <MultiBinding Converter="{StaticResource CheckedBrush}">
+                                                <Binding Path="Health" />
+                                                <Binding Path="Server.HasBeenChecked" />
+                                            </MultiBinding>
+                                        </Border.Background>
+                                    </Border>
+
+                                    <StackPanel Grid.Column="1" Margin="12,9,12,9">
+                                        <Border Background="Transparent" Cursor="Hand" MouseLeftButtonUp="OnServerHeaderClick"
+                                                ToolTip="Нажмите, чтобы развернуть или свернуть сервер">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto" />
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="Auto" />
+                                                    <RowDefinition Height="Auto" />
+                                                    <RowDefinition Height="Auto" />
+                                                    <RowDefinition Height="Auto" />
+                                                    <RowDefinition Height="Auto" />
+                                                </Grid.RowDefinitions>
+
+                                                <Ellipse Grid.Row="0" Grid.Column="0" Width="12" Height="12" Margin="0,0,8,0" VerticalAlignment="Center">
+                                                    <Ellipse.Fill>
+                                                        <MultiBinding Converter="{StaticResource CheckedBrush}">
+                                                            <Binding Path="Server.IsOnline" />
+                                                            <Binding Path="Server.HasBeenChecked" />
+                                                        </MultiBinding>
+                                                    </Ellipse.Fill>
+                                                </Ellipse>
+
+                                                <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding Server.Name}" FontWeight="SemiBold" FontSize="14" />
+                                                    <TextBlock Text=" — " />
+                                                    <TextBlock Text="{Binding Server.OnlineText}" />
+                                                </StackPanel>
+
+                                                <StackPanel Grid.Row="0" Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                                                    <Button Content="SSH" Padding="8,2" Margin="0,0,8,0"
+                                                            Command="{Binding DataContext.OpenSshCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                            CommandParameter="{Binding Server}" />
+                                                    <TextBlock FontSize="16" VerticalAlignment="Center" Foreground="{DynamicResource TextSecondaryBrush}" MinWidth="12">
+                                                        <TextBlock.Style>
+                                                            <Style TargetType="TextBlock">
+                                                                <Setter Property="Text" Value="▸" />
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding IsExpanded}" Value="True">
+                                                                        <Setter Property="Text" Value="▾" />
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </TextBlock.Style>
+                                                    </TextBlock>
+                                                </StackPanel>
+
+                                                <!-- the lines below span the whole card width: the SSH button no longer eats their room -->
+                                                <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3" Margin="20,2,0,0" Style="{StaticResource MutedTextStyle}"
+                                                           Text="{Binding Server.CompactMetrics}" TextTrimming="CharacterEllipsis" />
+
+                                                <StackPanel Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3" Margin="20,0,0,0" Orientation="Horizontal">
+                                                    <TextBlock Style="{StaticResource MutedTextStyle}" Text="{Binding TotalLabel}" />
+                                                    <TextBlock Style="{StaticResource MutedTextStyle}" Text=" · " />
+                                                    <Ellipse Width="8" Height="8" Fill="{StaticResource OkBrush}" Margin="0,1,4,0" />
+                                                    <TextBlock Style="{StaticResource MutedTextStyle}" Text="{Binding OkCount}" />
+                                                    <StackPanel Orientation="Horizontal" Visibility="{Binding WarningCount, Converter={x:Static conv:CountToVisibilityConverter.Instance}}">
+                                                        <TextBlock Style="{StaticResource MutedTextStyle}" Text=" · " />
+                                                        <Ellipse Width="8" Height="8" Fill="{StaticResource WarningBrush}" Margin="0,1,4,0" />
+                                                        <TextBlock Style="{StaticResource MutedTextStyle}" Text="{Binding WarningCount}" />
+                                                    </StackPanel>
+                                                    <TextBlock Style="{StaticResource MutedTextStyle}" Text=" · " />
+                                                    <Ellipse Width="8" Height="8" Fill="{StaticResource ProblemBrush}" Margin="0,1,4,0" />
+                                                    <TextBlock Style="{StaticResource MutedTextStyle}" Text="{Binding ProblemCount}" />
+                                                    <TextBlock Style="{StaticResource MutedTextStyle}" Text=" · проверяю…"
+                                                               Visibility="{Binding PendingCount, Converter={x:Static conv:CountToVisibilityConverter.Instance}}" />
+                                                </StackPanel>
+
+                                                <TextBlock Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="3" Margin="20,0,0,0" Style="{StaticResource SilenceNoteStyle}"
+                                                           DataContext="{Binding Server}" Text="{Binding SilenceNote}" TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="3" Margin="20,0,0,0" Style="{StaticResource MaintenanceNoteStyle}"
+                                                           DataContext="{Binding Server}" Text="{Binding MaintenanceNote}" ToolTip="{Binding MaintenanceToolTip}" TextTrimming="CharacterEllipsis" />
+                                            </Grid>
+                                        </Border>
+
+                                        <!-- Expanded part: detailed metrics + actions, then every resource of this server. -->
+                                        <StackPanel>
+                                            <StackPanel.Style>
+                                                <Style TargetType="StackPanel">
+                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsExpanded}" Value="True">
+                                                            <Setter Property="Visibility" Value="Visible" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </StackPanel.Style>
+
+                                            <Grid DataContext="{Binding Server}" Margin="0,8,0,0">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <StackPanel Grid.Column="0">
+                                                    <TextBlock Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap">
+                                                        <Run Text="ping " /><Run Text="{Binding PingDisplay, Mode=OneWay}" />
+                                                        <Run Text=" · load " /><Run Text="{Binding LoadDisplay, Mode=OneWay}" />
+                                                        <Run Text=" · uptime " /><Run Text="{Binding UptimeDisplay, Mode=OneWay}" />
+                                                        <Run Text=" · Net " /><Run Text="{Binding NetworkDisplay, Mode=OneWay}" />
+                                                    </TextBlock>
+                                                </StackPanel>
+                                                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Top">
+                                                    <Button Content="Перепроверить" Padding="8,3" Margin="0,0,4,0"
+                                                            Command="{Binding DataContext.RecheckServerCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                            CommandParameter="{Binding}" />
+                                                    <views:SilenceButton />
+                                                </StackPanel>
+                                            </Grid>
+
+                                            <Border Height="1" Background="{DynamicResource BackgroundBrush}" Margin="0,10,0,8" />
+
+                                            <!-- Children pick their DataTemplate by runtime type from the implicit
+                                                 templates declared in Window.Resources above; the open block is wide,
+                                                 so they flow into several columns. -->
+                                            <ItemsControl ItemsSource="{Binding Children}">
+                                                <ItemsControl.ItemsPanel>
+                                                    <ItemsPanelTemplate>
+                                                        <views:MasonryPanel Columns="{Binding ActualWidth, RelativeSource={RelativeSource Self}, Converter={x:Static conv:WidthToColumnsConverter.Instance}}" />
+                                                    </ItemsPanelTemplate>
+                                                </ItemsControl.ItemsPanel>
+                                                <ItemsControl.ItemContainerStyle>
+                                                    <Style TargetType="ContentPresenter">
+                                                        <Setter Property="Margin" Value="0,0,8,0" />
+                                                    </Style>
+                                                </ItemsControl.ItemContainerStyle>
+                                            </ItemsControl>
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <TextBlock Text="EXTERNAL SERVICES" Style="{StaticResource SectionHeaderStyle}"
+                           Visibility="{Binding ExternalServices.Count, Converter={x:Static conv:CountToVisibilityConverter.Instance}}" />
+
+                <!-- Two fixed rows of compact cards — AI services on top, messengers under them —
+                     each wrapping on its own, so a wide window never mixes the two groups into one
+                     strip. -->
+                <StackPanel>
+                    <StackPanel.Resources>
+                        <ItemsPanelTemplate x:Key="ExternalRowPanel">
+                            <WrapPanel Orientation="Horizontal" />
+                        </ItemsPanelTemplate>
+                        <!-- Deliberately a separate, explicit template rather than falling back to the
+                             implicit WebsiteRowViewModel one above: that one is styled for a nested
+                             child under a VPS card (indented, muted background), whereas an external
+                             service is a top-level card like a VPS itself. -->
+                        <DataTemplate x:Key="ExternalServiceCard" DataType="{x:Type vm:WebsiteRowViewModel}">
+                            <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="6" Padding="10,8" Margin="0,0,10,10" Width="220">
+                                <StackPanel>
+                                    <StackPanel Orientation="Horizontal">
+                                        <Ellipse Width="12" Height="12" Margin="2,6,10,0" VerticalAlignment="Top">
+                                            <Ellipse.Fill>
+                                                <MultiBinding Converter="{StaticResource CheckedBrush}">
+                                                    <Binding Path="Health" />
+                                                    <Binding Path="HasBeenChecked" />
+                                                </MultiBinding>
+                                            </Ellipse.Fill>
+                                        </Ellipse>
+                                        <StackPanel>
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="{Binding CardTitle}" FontWeight="SemiBold" />
+                                                <Border Style="{StaticResource CategoryBadgeStyle}">
+                                                    <TextBlock Text="{Binding CategoryLabel}" Style="{StaticResource CategoryBadgeTextStyle}" />
+                                                </Border>
+                                            </StackPanel>
+                        <TextBlock Style="{StaticResource SilenceNoteStyle}" Text="{Binding SilenceNote}" TextWrapping="Wrap" />
+                                            <TextBlock Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap">
+                                                <Run Text="{Binding ResponseSummary, Mode=OneWay}" />
+                                                <Run Text=" · " /><Run Text="{Binding SslSummary, Mode=OneWay}" />
+                                            </TextBlock>
+                                        </StackPanel>
+                                    </StackPanel>
+                                    <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                                        <Button Content="Открыть" Padding="5,3" Margin="0,0,3,0" Command="{Binding OpenCommand}" />
+                                        <Button Content="Проверить" Padding="5,3"
+                                                Command="{Binding DataContext.RecheckWebsiteCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                CommandParameter="{Binding}" />
+                        <views:SilenceButton Margin="3,0,0,0" />
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+                        </DataTemplate>
+                        <DataTemplate x:Key="LauncherCard" DataType="{x:Type vm:LauncherLinkViewModel}">
+                            <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="6" Padding="10,8" Margin="0,0,10,10" Width="220">
+                                <DockPanel>
+                                    <Button DockPanel.Dock="Right" Content="Открыть" Padding="8,3" VerticalAlignment="Center" Margin="8,0,0,0"
+                                            Command="{Binding OpenCommand}" />
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Text="{Binding Subtitle}" Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </DockPanel>
+                            </Border>
+                        </DataTemplate>
+                        <views:AiCardTemplateSelector x:Key="AiCardSelector"
+                                                      WebsiteTemplate="{StaticResource ExternalServiceCard}"
+                                                      LauncherTemplate="{StaticResource LauncherCard}" />
+                    </StackPanel.Resources>
+
+                    <!-- AI sites (checked) and then local AI apps (plain launcher cards, e.g. Local Assistant) in one row -->
+                    <ItemsControl ItemsSource="{Binding ExternalAiItems}"
+                                  ItemsPanel="{StaticResource ExternalRowPanel}"
+                                  ItemTemplateSelector="{StaticResource AiCardSelector}" />
+                    <ItemsControl ItemsSource="{Binding ExternalOtherServices}"
+                                  ItemsPanel="{StaticResource ExternalRowPanel}"
+                                  ItemTemplate="{StaticResource ExternalServiceCard}" />
+                    <!-- the owner's own apps (Ассистент, TaskBoard, Companion): same card, pinned from the servers' sites -->
+                    <ItemsControl ItemsSource="{Binding PinnedLauncherServices}"
+                                  ItemsPanel="{StaticResource ExternalRowPanel}"
+                                  ItemTemplate="{StaticResource ExternalServiceCard}" />
+                    <!-- hosting provider panels and AI API consoles: plain open-the-app buttons, nothing is polled -->
+                    <ItemsControl ItemsSource="{Binding ProviderLaunchers}"
+                                  ItemsPanel="{StaticResource ExternalRowPanel}"
+                                  ItemTemplate="{StaticResource LauncherCard}" />
+                    <ItemsControl ItemsSource="{Binding ApiLaunchers}"
+                                  ItemsPanel="{StaticResource ExternalRowPanel}"
+                                  ItemTemplate="{StaticResource LauncherCard}" />
+                </StackPanel>
+
+            </StackPanel>
+        </ScrollViewer>
+    </DockPanel>
+</Window>
